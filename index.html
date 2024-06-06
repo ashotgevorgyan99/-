@@ -1,22 +1,40 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ru">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Text Saver</title>
+    <title>Сохранитель данных</title>
     <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div class="container">
-        <h1>Text Saver</h1>
-        <textarea id="textInput" placeholder="Введите текст"></textarea>
-        <button id="saveButton">Сохранить текст</button>
-        <input type="text" id="searchInput" placeholder="Поиск текста">
+        
+        <h1>Сохранитель данных</h1>
+        <input type="text" id="textInput" placeholder="Введите текст">
+        <input type="text" id="linkInput" placeholder="Введите ссылку">
+        <input type="file" id="imageInput" accept="image/*">
+        <button id="saveButton">Сохранить</button>
+        <input type="text" id="searchInput" placeholder="Поиск данных">
         <button id="searchButton">Искать</button>
-        <button id="clearButton">Удалить все сохранённые тексты</button>
+        <button id="clearButton">Удалить все сохранённые данные</button>
         <div id="searchResults"></div>
-        <div id="savedTexts"></div>
+        <div id="savedData"></div>
+        
+        
+    <div id="savedData"></div>
+    <div id="editModal" class="modal">
+        <div class="modal-content">
+            <span id="closeEditModal" class="close">&times;</span>
+            <input type="text" id="editInput">
+            <button id="saveEditButton">Պահպանել փոփոխությունները</button>
+        </div>
     </div>
+
+        
+        
+    </div>
+    
+    
     <script src="script.js"></script>
 </body>
 </html>
