@@ -1,54 +1,76 @@
 document.getElementById('saveButton').addEventListener('click', saveData);
-document.getElementById('searchInput').addEventListener('input', searchData);
+document.getElementById('searchButton').addEventListener('click', searchFiles);
 document.getElementById('clearButton').addEventListener('click', clearData);
-document.getElementById('saveEditButton').addEventListener('click', saveEditedData);
-document.getElementById('closeEditModal').addEventListener('click', closeEditModal);
+document.getElementById('showAllButton').addEventListener('click', showAllFiles);
 
-let editIndex = -1;
+let editIndex = null;
 
 function saveData() {
     const text = document.getElementById('textInput').value.trim();
     const link = document.getElementById('linkInput').value.trim();
     const file = document.getElementById('imageInput').files[0];
 
-    if (text || link || file) {
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            let savedData = JSON.parse(localStorage.getItem('data')) || [];
-            const imageData = file ? e.target.result : '';
-            savedData.push({ text, link, image: imageData });
-            localStorage.setItem('data', JSON.stringify(savedData));
-            displaySavedData();
-        };
-        if (file) {
-            reader.readAsDataURL(file);
+    if (!text && !link && !file && editIndex === null) {
+        alert('Введите текст, ссылку или выберите файл для сохранения');
+        return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        let savedData = JSON.parse(localStorage.getItem('data')) || [];
+        const imageData = file ? e.target.result : '';
+
+        if (editIndex !== null) {
+            // Update existing item
+            savedData[editIndex] = { text, link, image: imageData };
+            editIndex = null;
         } else {
-            let savedData = JSON.parse(localStorage.getItem('data')) || [];
-            savedData.push({ text, link, image: '' });
-            localStorage.setItem('data', JSON.stringify(savedData));
-            displaySavedData();
+            // Add new item
+            savedData.push({ text, link, image: imageData });
         }
+
+        localStorage.setItem('data', JSON.stringify(savedData));
+        clearInputs();
+        searchFiles(); // Refresh the search results
+    };
+    if (file) {
+        reader.readAsDataURL(file);
+    } else {
+        let savedData = JSON.parse(localStorage.getItem('data')) || [];
+        if (editIndex !== null) {
+            savedData[editIndex] = { text, link, image: savedData[editIndex].image };
+            editIndex = null;
+        } else {
+            savedData.push({ text, link, image: '' });
+        }
+        localStorage.setItem('data', JSON.stringify(savedData));
+        clearInputs();
+        searchFiles(); // Refresh the search results
     }
 }
 
-function searchData() {
+function searchFiles() {
     const searchInput = document.getElementById('searchInput').value.trim().toLowerCase();
     const savedData = JSON.parse(localStorage.getItem('data')) || [];
     const searchResults = document.getElementById('searchResults');
-    searchResults.innerHTML = '';
+    searchResults.innerHTML = ''; // Очищаем результаты поиска
 
     savedData.forEach((item, index) => {
         if ((item.text && item.text.toLowerCase().includes(searchInput)) || 
-            (item.link && item.link.toLowerCase().includes(searchInput)) || 
-            (item.image && item.image.toLowerCase().includes(searchInput))) {
+            (item.link && item.link.toLowerCase().includes(searchInput))) {
             const resultDiv = document.createElement('div');
             resultDiv.className = 'saved-item';
-            resultDiv.innerHTML = highlightText(item.text || item.link, searchInput);
+
+            if (item.text) {
+                const textElement = document.createElement('p');
+                textElement.innerHTML = highlightText(item.text, searchInput);
+                resultDiv.appendChild(textElement);
+            }
 
             if (item.link) {
                 const linkElement = document.createElement('a');
                 linkElement.href = item.link;
-                linkElement.textContent = item.link;
+                linkElement.innerHTML = highlightText(item.link, searchInput);
                 linkElement.target = "_blank";
                 resultDiv.appendChild(linkElement);
             }
@@ -62,49 +84,38 @@ function searchData() {
                 resultDiv.appendChild(imgElement);
             }
 
+            const editDeleteDiv = document.createElement('div');
+            editDeleteDiv.className = 'edit-delete-buttons';
+
             const editButton = document.createElement('button');
-            editButton.textContent = 'Редактировать';
-            editButton.className = 'edit-button';
-            editButton.addEventListener('click', () => editData(index));
-            resultDiv.appendChild(editButton);
+            editButton.textContent = 'Изменить';
+            editButton.addEventListener('click', () => editItem(index));
+            editDeleteDiv.appendChild(editButton);
 
             const deleteButton = document.createElement('button');
             deleteButton.textContent = 'Удалить';
-            deleteButton.className = 'delete-button';
-            deleteButton.addEventListener('click', () => deleteData(index));
-            resultDiv.appendChild(deleteButton);
+            deleteButton.addEventListener('click', () => deleteItem(index));
+            editDeleteDiv.appendChild(deleteButton);
 
-            searchResults.prepend(resultDiv); // добавление найденного результата в начало списка
+            resultDiv.appendChild(editDeleteDiv);
+            searchResults.appendChild(resultDiv);
         }
     });
 }
 
-function highlightText(text, searchInput) {
-    const index = text.toLowerCase().indexOf(searchInput);
-    if (index !== -1) {
-        const highlightedText = text.substring(0, index) + 
-                               '<span class="highlight">' + 
-                               text.substring(index, index + searchInput.length) + 
-                               '</span>' + 
-                               text.substring(index + searchInput.length);
-        return highlightedText;
-    }
-    return text;
-}
-
-function displaySavedData() {
+function showAllFiles() {
     const savedData = JSON.parse(localStorage.getItem('data')) || [];
-    const savedDataDiv = document.getElementById('savedData');
-    savedDataDiv.innerHTML = '';
+    const allFilesResults = document.getElementById('allFilesResults');
+    allFilesResults.innerHTML = ''; // Очищаем результаты
 
     savedData.forEach((item, index) => {
-        const dataDiv = document.createElement('div');
-        dataDiv.className = 'saved-item';
-        
+        const resultDiv = document.createElement('div');
+        resultDiv.className = 'saved-item';
+
         if (item.text) {
             const textElement = document.createElement('p');
             textElement.textContent = item.text;
-            dataDiv.appendChild(textElement);
+            resultDiv.appendChild(textElement);
         }
 
         if (item.link) {
@@ -112,90 +123,79 @@ function displaySavedData() {
             linkElement.href = item.link;
             linkElement.textContent = item.link;
             linkElement.target = "_blank";
-            dataDiv.appendChild(linkElement);
+            resultDiv.appendChild(linkElement);
         }
 
         if (item.image) {
             const imgElement = document.createElement('img');
             imgElement.src = item.image;
+            imgElement.style.width = '100px';
+            imgElement.style.height = '100px';
             imgElement.addEventListener('click', () => openModal(item.image));
-            dataDiv.appendChild(imgElement);
+            resultDiv.appendChild(imgElement);
         }
 
+        const editDeleteDiv = document.createElement('div');
+        editDeleteDiv.className = 'edit-delete-buttons';
+
         const editButton = document.createElement('button');
-        editButton.textContent = 'Редактировать';
-        editButton.className = 'edit-button';
-        editButton.addEventListener('click', () => editData(index));
-        dataDiv.appendChild(editButton);
+        editButton.textContent = 'Изменить';
+        editButton.addEventListener('click', () => editItem(index));
+        editDeleteDiv.appendChild(editButton);
 
         const deleteButton = document.createElement('button');
         deleteButton.textContent = 'Удалить';
-        deleteButton.className = 'delete-button';
-        deleteButton.addEventListener('click', () => deleteData(index));
-        dataDiv.appendChild(deleteButton);
+        deleteButton.addEventListener('click', () => deleteItem(index));
+        editDeleteDiv.appendChild(deleteButton);
 
-        savedDataDiv.appendChild(dataDiv);
+        resultDiv.appendChild(editDeleteDiv);
+        allFilesResults.appendChild(resultDiv);
     });
-
-    // Скрыть сохраненные данные
-    savedDataDiv.style.display = 'none';
-}
-
-function deleteData(index) {
-    let savedData = JSON.parse(localStorage.getItem('data')) || [];
-    savedData.splice(index, 1);
-    localStorage.setItem('data', JSON.stringify(savedData));
-    displaySavedData();
 }
 
 function clearData() {
     localStorage.removeItem('data');
-    displaySavedData();
     document.getElementById('searchResults').innerHTML = '';
+    document.getElementById('allFilesResults').innerHTML = '';
 }
 
-// Modal functionality
-function openModal(src) {
-    const modal = document.createElement('div');
-    modal.className = 'modal';
-    modal.id = 'imageModal';
-    modal.innerHTML = `
-        <span class="close" id="closeModal">&times;</span>
-        <img class="modal-content" id="modalImage" src="${src}" style="max-width: 80%; max-height: 80%;">
-    `;
-    document.body.appendChild(modal);
+function highlightText(text, searchInput) {
+    const regex = new RegExp(`(${searchInput})`, 'gi');
+    return text.replace(regex, "<span class='highlight'>$1</span>");
+}
 
-    const closeModal = document.getElementById('closeModal');
+function openModal(imageSrc) {
+    const modal = document.getElementById('imageModal');
+    const modalImage = document.getElementById('modalImage');
+    modal.style.display = 'block';
+    modalImage.src = imageSrc;
+
+    const closeModal = document.querySelector('.close');
     closeModal.onclick = function() {
-        modal.style.display = "none";
-        modal.remove();
-    };
-
-    modal.style.display = "block";
-}
-
-function editData(index) {
-    editIndex = index;
-    const savedData = JSON.parse(localStorage.getItem('data')) || [];
-    document.getElementById('editInput').value = savedData[index].text || savedData[index].link || '';
-    document.getElementById('editModal').style.display = 'block';
-}
-
-function closeEditModal() {
-    document.getElementById('editModal').style.display = 'none';
-    editIndex = -1;
-}
-
-function saveEditedData() {
-    const newText = document.getElementById('editInput').value.trim();
-    if (newText && editIndex > -1) {
-        let savedData = JSON.parse(localStorage.getItem('data')) || [];
-        savedData[editIndex].text = newText;
-        localStorage.setItem('data', JSON.stringify(savedData));
-        displaySavedData();
-        closeEditModal();
+        modal.style.display = 'none';
     }
 }
 
-// Initial display of saved data
-displaySavedData();
+function editItem(index) {
+    const savedData = JSON.parse(localStorage.getItem('data')) || [];
+    const item = savedData[index];
+
+    document.getElementById('textInput').value = item.text || '';
+    document.getElementById('linkInput').value = item.link || '';
+    // Note: Image file input cannot be set programmatically for security reasons.
+
+    editIndex = index;
+}
+
+function deleteItem(index) {
+    const savedData = JSON.parse(localStorage.getItem('data')) || [];
+    savedData.splice(index, 1);
+    localStorage.setItem('data', JSON.stringify(savedData));
+    searchFiles();
+}
+
+function clearInputs() {
+    document.getElementById('textInput').value = '';
+    document.getElementById('linkInput').value = '';
+    document.getElementById('imageInput').value = '';
+}
