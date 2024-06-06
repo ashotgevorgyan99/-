@@ -1,6 +1,10 @@
 document.getElementById('saveButton').addEventListener('click', saveData);
-document.getElementById('searchButton').addEventListener('click', searchData);
+document.getElementById('searchInput').addEventListener('input', searchData);
 document.getElementById('clearButton').addEventListener('click', clearData);
+document.getElementById('saveEditButton').addEventListener('click', saveEditedData);
+document.getElementById('closeEditModal').addEventListener('click', closeEditModal);
+
+let editIndex = -1;
 
 function saveData() {
     const text = document.getElementById('textInput').value.trim();
@@ -33,20 +37,44 @@ function searchData() {
     const searchResults = document.getElementById('searchResults');
     searchResults.innerHTML = '';
 
-    savedData.forEach((item) => {
+    savedData.forEach((item, index) => {
         if ((item.text && item.text.toLowerCase().includes(searchInput)) || 
             (item.link && item.link.toLowerCase().includes(searchInput)) || 
             (item.image && item.image.toLowerCase().includes(searchInput))) {
             const resultDiv = document.createElement('div');
+            resultDiv.className = 'saved-item';
             resultDiv.innerHTML = highlightText(item.text || item.link, searchInput);
+
+            if (item.link) {
+                const linkElement = document.createElement('a');
+                linkElement.href = item.link;
+                linkElement.textContent = item.link;
+                linkElement.target = "_blank";
+                resultDiv.appendChild(linkElement);
+            }
+
             if (item.image) {
                 const imgElement = document.createElement('img');
                 imgElement.src = item.image;
                 imgElement.style.width = '100px';
                 imgElement.style.height = '100px';
+                imgElement.addEventListener('click', () => openModal(item.image));
                 resultDiv.appendChild(imgElement);
             }
-            searchResults.appendChild(resultDiv);
+
+            const editButton = document.createElement('button');
+            editButton.textContent = 'Редактировать';
+            editButton.className = 'edit-button';
+            editButton.addEventListener('click', () => editData(index));
+            resultDiv.appendChild(editButton);
+
+            const deleteButton = document.createElement('button');
+            deleteButton.textContent = 'Удалить';
+            deleteButton.className = 'delete-button';
+            deleteButton.addEventListener('click', () => deleteData(index));
+            resultDiv.appendChild(deleteButton);
+
+            searchResults.prepend(resultDiv); // добавление найденного результата в начало списка
         }
     });
 }
@@ -94,6 +122,12 @@ function displaySavedData() {
             dataDiv.appendChild(imgElement);
         }
 
+        const editButton = document.createElement('button');
+        editButton.textContent = 'Редактировать';
+        editButton.className = 'edit-button';
+        editButton.addEventListener('click', () => editData(index));
+        dataDiv.appendChild(editButton);
+
         const deleteButton = document.createElement('button');
         deleteButton.textContent = 'Удалить';
         deleteButton.className = 'delete-button';
@@ -102,6 +136,9 @@ function displaySavedData() {
 
         savedDataDiv.appendChild(dataDiv);
     });
+
+    // Скрыть сохраненные данные
+    savedDataDiv.style.display = 'none';
 }
 
 function deleteData(index) {
@@ -124,8 +161,7 @@ function openModal(src) {
     modal.id = 'imageModal';
     modal.innerHTML = `
         <span class="close" id="closeModal">&times;</span>
-        <img class="modal-content" id="modalImage" src="${src}">
-        <div id="caption"></div>
+        <img class="modal-content" id="modalImage" src="${src}" style="max-width: 80%; max-height: 80%;">
     `;
     document.body.appendChild(modal);
 
@@ -137,20 +173,6 @@ function openModal(src) {
 
     modal.style.display = "block";
 }
-
-// Initial display of saved data
-displaySavedData();
-
-
-
-
-
-
-
-document.getElementById('saveEditButton').addEventListener('click', saveEditedData);
-document.getElementById('closeEditModal').addEventListener('click', closeEditModal);
-
-let editIndex = -1;
 
 function editData(index) {
     editIndex = index;
@@ -175,51 +197,5 @@ function saveEditedData() {
     }
 }
 
-function displaySavedData() {
-    const savedData = JSON.parse(localStorage.getItem('data')) || [];
-    const savedDataDiv = document.getElementById('savedData');
-    savedDataDiv.innerHTML = '';
-
-    savedData.forEach((item, index) => {
-        const dataDiv = document.createElement('div');
-        dataDiv.className = 'saved-item';
-
-        if (item.text) {
-            const textElement = document.createElement('p');
-            textElement.textContent = item.text;
-            dataDiv.appendChild(textElement);
-        }
-
-        if (item.link) {
-            const linkElement = document.createElement('a');
-            linkElement.href = item.link;
-            linkElement.textContent = item.link;
-            linkElement.target = "_blank";
-            dataDiv.appendChild(linkElement);
-        }
-
-        if (item.image) {
-            const imgElement = document.createElement('img');
-            imgElement.src = item.image;
-            imgElement.addEventListener('click', () => openModal(item.image));
-            dataDiv.appendChild(imgElement);
-        }
-
-        const deleteButton = document.createElement('button');
-        deleteButton.textContent = 'Ջնջել';
-        deleteButton.className = 'delete-button';
-        deleteButton.addEventListener('click', () => deleteData(index));
-        dataDiv.appendChild(deleteButton);
-
-        const editButton = document.createElement('button');
-        editButton.textContent = 'Փոփոխել';
-        editButton.className = 'edit-button';
-        editButton.addEventListener('click', () => editData(index));
-        dataDiv.appendChild(editButton);
-
-        savedDataDiv.appendChild(dataDiv);
-    });
-}
-
-// Call displaySavedData initially
+// Initial display of saved data
 displaySavedData();
