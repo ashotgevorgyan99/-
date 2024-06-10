@@ -8,7 +8,12 @@ if ($_SERVER["REQUEST_METHOD"] == "POST") {
     $subject = "New Message from Website";
     $headers = "From: $email";
 
-    mail($to, $subject, $message, $headers);
-    echo "Your message has been sent.";
+    if (mail($to, $subject, $message, $headers)) {
+        echo "Your message has been sent.";
+    } else {
+        echo "There was a problem sending your message.";
+    }
+} else {
+    echo "405 Method Not Allowed";
 }
 ?>
